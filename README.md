@@ -5,10 +5,6 @@
 [![JS](https://img.shields.io/badge/Frontend-Vanilla%20JS-yellow?style=for-the-badge&logo=javascript)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?style=for-the-badge&logo=sqlite)](https://www.sqlite.org/)
 
-**Traveloop** is a sophisticated, full-stack travel planning platform designed to transform the way you organize your journeys. Developed for the **Odoo Hackathon**, it blends a high-performance Python/Flask backend with a vibrant, glassmorphic frontend to provide a seamless itinerary management experience.
-
----
-
 ## 🌟 Key Features
 
 - **🗺️ Intelligent Itinerary Builder**: Plan multi-city trips with precision. Add city stops, schedule activities, and visualize your entire timeline.
