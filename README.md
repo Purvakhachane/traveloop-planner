@@ -70,7 +70,4 @@ We welcome contributions! Whether it's a bug fix, a new feature, or a UI enhance
 
 ---
 
-## 📜 License
-Distributed under the MIT License. See `LICENSE` for more information.
-
 Developed with ❤️ for the Odoo Hackathon.
