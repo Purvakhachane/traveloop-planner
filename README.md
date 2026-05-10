@@ -1,9 +1,8 @@
 # ✈️ Traveloop: Your Ultimate Multi-City Travel Planner
 
-[![Python](https://img.shields.io/badge/Backend-Python%203.8+-blue?style=for-the-badge&logo=python)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/Framework-Flask-lightgrey?style=for-the-badge&logo=flask)](https://flask.palletsprojects.com/)
-[![JS](https://img.shields.io/badge/Frontend-Vanilla%20JS-yellow?style=for-the-badge&logo=javascript)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-[![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?style=for-the-badge&logo=sqlite)](https://www.sqlite.org/)
+Traveloop is a modern travel planning platform developed for the Odoo Hackathon.  
+The platform helps users organize trips, manage itineraries, track expenses, and explore destinations through a simple and user-friendly interface.
+
 
 ## 🌟 Key Features
 
