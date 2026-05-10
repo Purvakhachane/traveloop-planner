@@ -3,31 +3,14 @@
    ============================================================ */
 
 const AdminScreen = {
-  render() {
-    const allTrips = DB.getTrips();
-    const allUsers = DB.getUsers();
-    const allStops = DB.getStops();
-    const totalActivities = allStops.reduce((s, st) => s + (st.activities || []).length, 0);
-    const totalBudget = allTrips.reduce((s, t) => s + (t.budget || 0), 0);
-    const avgBudget = allTrips.length > 0 ? Math.round(totalBudget / allTrips.length) : 0;
-    const publicTrips = allTrips.filter(t => t.isPublic).length;
-    const completedTrips = allTrips.filter(t => t.status === 'completed').length;
+  async render() {
+    const stats = await API.getAdminStats();
+    this._stats = stats;
 
-    // City popularity from stops
-    const cityCount = {};
-    allStops.forEach(s => { if (s.city) cityCount[s.city] = (cityCount[s.city] || 0) + 1; });
-    const topCities = Object.entries(cityCount).sort((a, b) => b[1] - a[1]).slice(0, 6);
-
-    // Activity type distribution
-    const typeCount = {};
-    allStops.forEach(s => (s.activities || []).forEach(a => {
-      typeCount[a.type] = (typeCount[a.type] || 0) + 1;
-    }));
-    const topTypes = Object.entries(typeCount).sort((a, b) => b[1] - a[1]).slice(0, 6);
-
-    // Status distribution
-    const statusCount = { planning: 0, upcoming: 0, completed: 0 };
-    allTrips.forEach(t => { const k = t.status || 'planning'; statusCount[k] = (statusCount[k] || 0) + 1; });
+    const totalBudget = stats.totalBudget || 0;
+    const avgBudget = stats.totalTrips > 0 ? Math.round(totalBudget / stats.totalTrips) : 0;
+    const publicTrips = 0;
+    const completedTrips = stats.statusCount.completed;
 
     return `
     <div>
@@ -43,17 +26,17 @@ const AdminScreen = {
       <div class="admin-stats-row" style="margin-bottom:20px;">
         <div class="stat-card blue">
           <div class="stat-icon">👥</div>
-          <div class="stat-value text-gradient">${allUsers.length}</div>
+          <div class="stat-value text-gradient">${stats.totalUsers}</div>
           <div class="stat-label">Total Users</div>
         </div>
         <div class="stat-card coral">
           <div class="stat-icon">🗺️</div>
-          <div class="stat-value text-gradient-sunset">${allTrips.length}</div>
+          <div class="stat-value text-gradient-sunset">${stats.totalTrips}</div>
           <div class="stat-label">Total Trips</div>
         </div>
         <div class="stat-card purple">
           <div class="stat-icon">📍</div>
-          <div class="stat-value" style="background:var(--gradient-purple);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${allStops.length}</div>
+          <div class="stat-value" style="background:var(--gradient-purple);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${stats.totalStops}</div>
           <div class="stat-label">City Stops</div>
         </div>
         <div class="stat-card green">
@@ -66,7 +49,7 @@ const AdminScreen = {
       <!-- Secondary Stats Row -->
       <div class="grid-4" style="margin-bottom:28px;">
         <div class="card" style="text-align:center; padding:20px;">
-          <div style="font-size:28px; font-weight:800; color:var(--accent-primary); font-family:'Outfit',sans-serif; margin-bottom:4px;">${totalActivities}</div>
+          <div style="font-size:28px; font-weight:800; color:var(--accent-primary); font-family:'Outfit',sans-serif; margin-bottom:4px;">${stats.totalStops}</div>
           <div style="font-size:13px; color:var(--text-muted);">🎯 Activities Planned</div>
         </div>
         <div class="card" style="text-align:center; padding:20px;">
@@ -218,9 +201,7 @@ const AdminScreen = {
               </tr>
             </thead>
             <tbody>
-              ${allUsers.map(u => {
-                const userTrips = DB.getUserTrips(u.id);
-                const userStops = userTrips.flatMap(t => DB.getTripStops(t.id));
+              ${stats.users.map(u => {
                 return `
                 <tr>
                   <td>
@@ -230,8 +211,8 @@ const AdminScreen = {
                     </div>
                   </td>
                   <td style="color:var(--text-secondary);">${u.email}</td>
-                  <td><span class="badge badge-blue">${userTrips.length} trips</span></td>
-                  <td><span class="badge badge-purple">${userStops.length} cities</span></td>
+                  <td><span class="badge badge-blue">${u.tripCount} trips</span></td>
+                  <td><span class="badge badge-purple">N/A</span></td>
                   <td style="color:var(--text-muted);">${new Date(u.createdAt || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
                   <td><span class="badge badge-green" style="display:inline-flex; align-items:center; gap:5px;"><span class="live-dot" style="width:6px;height:6px;"></span> Active</span></td>
                 </tr>`;
@@ -245,24 +226,10 @@ const AdminScreen = {
 
   afterRender() {
     try {
-      const allTrips = DB.getTrips();
-      const allStops = DB.getStops();
-
-      // City count for bar chart
-      const cityCount = {};
-      allStops.forEach(s => { if (s.city) cityCount[s.city] = (cityCount[s.city] || 0) + 1; });
-      const topCities = Object.entries(cityCount).sort((a, b) => b[1] - a[1]).slice(0, 6);
-
-      // Activity type count for pie chart
-      const typeCount = {};
-      allStops.forEach(s => (s.activities || []).forEach(a => {
-        typeCount[a.type] = (typeCount[a.type] || 0) + 1;
-      }));
-      const topTypes = Object.entries(typeCount).sort((a, b) => b[1] - a[1]).slice(0, 6);
-
-      // Status distribution
-      const statusCount = { planning: 0, upcoming: 0, completed: 0 };
-      allTrips.forEach(t => { const k = t.status || 'planning'; statusCount[k] = (statusCount[k] || 0) + 1; });
+      const stats = this._stats;
+      const topCities = stats.topCities || [];
+      const topTypes = stats.topTypes || [];
+      const statusCount = stats.statusCount || { planning: 1, upcoming: 1, completed: 1 };
 
       // 1. Growth line chart (simulated)
       Charts.line('admin-growth-chart',

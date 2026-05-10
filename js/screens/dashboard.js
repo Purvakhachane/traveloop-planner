@@ -3,14 +3,13 @@
    ============================================================ */
 
 const DashboardScreen = {
-  render() {
+  async render() {
     const user = DB.getCurrentUser();
-    const trips = DB.getUserTrips(user.id);
-    const totalBudget = trips.reduce((sum, t) => sum + (t.budget || 0), 0);
-    const totalStops = trips.reduce((sum, t) => sum + DB.getTripStops(t.id).length, 0);
+    const data = await API.getDashboardData();
+    
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-    const recentTrips = [...trips].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0,3);
+    const recentTrips = data.recentTrips || [];
 
     const popularDestinations = CITIES_DATA.slice(0,6);
 
@@ -32,23 +31,23 @@ const DashboardScreen = {
       <div class="stats-row">
         <div class="stat-card blue">
           <div class="stat-icon">🗺️</div>
-          <div class="stat-value text-gradient">${trips.length}</div>
+          <div class="stat-value text-gradient">${data.totalTrips}</div>
           <div class="stat-label">Total Trips</div>
         </div>
         <div class="stat-card coral">
           <div class="stat-icon">📍</div>
-          <div class="stat-value text-gradient-sunset">${totalStops}</div>
-          <div class="stat-label">Destinations</div>
+          <div class="stat-value text-gradient-sunset">${data.upcomingCount}</div>
+          <div class="stat-label">Upcoming</div>
         </div>
         <div class="stat-card purple">
           <div class="stat-icon">💰</div>
-          <div class="stat-value" style="background:var(--gradient-purple);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">$${totalBudget.toLocaleString()}</div>
-          <div class="stat-label">Total Budget</div>
+          <div class="stat-value" style="background:var(--gradient-purple);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">$${data.plannedBudget.toLocaleString()}</div>
+          <div class="stat-label">Planned Budget</div>
         </div>
         <div class="stat-card green">
-          <div class="stat-icon">✅</div>
-          <div class="stat-value" style="background:var(--gradient-green);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${trips.filter(t=>t.status==='completed').length}</div>
-          <div class="stat-label">Trips Completed</div>
+          <div class="stat-icon">💳</div>
+          <div class="stat-value" style="background:var(--gradient-green);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">$${data.actualCost.toLocaleString()}</div>
+          <div class="stat-label">Actual Cost</div>
         </div>
       </div>
 
@@ -123,7 +122,6 @@ const DashboardScreen = {
   },
 
   _renderTripCard(trip) {
-    const stops = DB.getTripStops(trip.id);
     const statusColors = { upcoming: 'badge-blue', completed: 'badge-green', planning: 'badge-amber' };
     return `
     <div class="trip-card" onclick="App.navigate('itinerary-view', '${trip.id}')">
@@ -137,7 +135,6 @@ const DashboardScreen = {
         <div class="trip-card-name">${trip.name}</div>
         <div class="trip-card-meta">
           <span>📅 ${this._formatDateRange(trip.startDate, trip.endDate)}</span>
-          <span>📍 ${stops.length} stop${stops.length !== 1 ? 's' : ''}</span>
           ${trip.budget ? `<span>💰 $${trip.budget.toLocaleString()}</span>` : ''}
         </div>
         <div class="trip-card-actions">

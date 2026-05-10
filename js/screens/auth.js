@@ -83,30 +83,54 @@ const AuthScreen = {
     }
   },
 
-  login(e) {
+  async login(e) {
     e.preventDefault();
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
-    const users = DB.getUsers();
-    const user = users.find(u => u.email === email && u.password === password);
-    if (!user) { App.toast('Invalid email or password', 'error'); return; }
-    DB.setCurrentUser(user);
-    App.toast(`Welcome back, ${user.name}! 🌍`, 'success');
-    App.navigate('dashboard');
+    const btn = document.getElementById('login-btn');
+    
+    try {
+      btn.disabled = true;
+      btn.textContent = '✈️ Signing In...';
+      
+      const data = await API.login(email, password);
+      
+      API.setToken(data.token);
+      DB.setCurrentUser(data.user);
+      
+      App.toast(`Welcome back, ${data.user.name}! 🌍`, 'success');
+      App.navigate('dashboard');
+    } catch (err) {
+      App.toast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '✈️ &nbsp; Sign In & Fly';
+    }
   },
 
-  signup(e) {
+  async signup(e) {
     e.preventDefault();
     const name = document.getElementById('signup-name').value.trim();
     const email = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value;
-    const users = DB.getUsers();
-    if (users.find(u => u.email === email)) { App.toast('Email already registered', 'error'); return; }
-    const user = { id: DB.uuid(), name, email, password, createdAt: new Date().toISOString() };
-    users.push(user);
-    DB.saveUsers(users);
-    DB.setCurrentUser(user);
-    App.toast(`Welcome to Traveloop, ${name}! ✈️`, 'success');
-    App.navigate('dashboard');
+    const btn = document.getElementById('signup-btn');
+
+    try {
+      btn.disabled = true;
+      btn.textContent = '🚀 Creating Account...';
+      
+      const data = await API.signup(name, email, password);
+      
+      API.setToken(data.token);
+      DB.setCurrentUser(data.user);
+      
+      App.toast(`Welcome to Traveloop, ${name}! ✈️`, 'success');
+      App.navigate('dashboard');
+    } catch (err) {
+      App.toast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '🚀 &nbsp; Start Exploring';
+    }
   }
 };

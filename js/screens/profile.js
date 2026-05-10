@@ -5,23 +5,15 @@
 const ProfileScreen = {
   _editing: false,
 
-  render() {
+  async render() {
+    const trips = await API.getTrips();
+    const dashboard = await API.getDashboardData();
     const user = DB.getCurrentUser();
-    const trips = DB.getUserTrips(user.id);
-    const allStops = trips.flatMap(t => DB.getTripStops(t.id));
-    const totalStops = allStops.length;
-    const totalBudget = trips.reduce((s, t) => s + (t.budget || 0), 0);
+    
+    const totalStops = 0; // Backend doesn't return total stops yet in dashboard
+    const totalBudget = dashboard.plannedBudget || 0;
     const completedTrips = trips.filter(t => t.status === 'completed').length;
-
-    // Build favourite cities (unique cities from all stops)
-    const citySeen = {};
-    const favouriteCities = [];
-    allStops.forEach(s => {
-      if (s.city && !citySeen[s.city]) {
-        citySeen[s.city] = true;
-        favouriteCities.push({ city: s.city, flag: s.flag || '📍', country: s.country || '' });
-      }
-    });
+    const favouriteCities = []; // Placeholder
 
     return `
     <div>

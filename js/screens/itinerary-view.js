@@ -6,15 +6,14 @@ const ItineraryViewScreen = {
   _tripId: null,
   _viewMode: 'timeline', // 'timeline' | 'list'
 
-  render(tripId) {
-    const user = DB.getCurrentUser();
-    const trips = DB.getUserTrips(user.id);
+  async render(tripId) {
+    const trips = await API.getTrips();
     this._tripId = tripId || trips[0]?.id || null;
 
     if (!this._tripId) return `<div class="empty-state"><div class="empty-state-icon">🗺️</div><div class="empty-state-title">No trips found</div><button class="btn btn-primary" onclick="App.navigate('create-trip')" style="margin-top:16px;">Create a Trip</button></div>`;
 
-    const trip = DB.getTrip(this._tripId);
-    const stops = DB.getTripStops(this._tripId);
+    const trip = await API.getTrip(this._tripId);
+    const stops = trip.stops || [];
     const totalCost = stops.reduce((s, st) => s + (st.activities || []).reduce((a, ac) => a + ac.cost, 0), 0);
     const totalActivities = stops.reduce((s, st) => s + (st.activities || []).length, 0);
 
@@ -23,7 +22,7 @@ const ItineraryViewScreen = {
       <!-- Trip Selector -->
       <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
         <select class="form-input" onchange="ItineraryViewScreen.switchTrip(this.value)" style="max-width:280px;">
-          ${trips.map(t => `<option value="${t.id}" ${t.id===this._tripId?'selected':''}>${t.emoji||'✈️'} ${t.name}</option>`).join('')}
+          ${trips.map(t => `<option value="${t.id}" ${String(t.id)===String(this._tripId)?'selected':''}>${t.emoji||'✈️'} ${t.name}</option>`).join('')}
         </select>
         <button class="btn btn-ghost btn-sm" onclick="App.navigate('itinerary-builder', '${this._tripId}')">✏️ Edit Itinerary</button>
         ${trip?.isPublic ? `<button class="btn btn-green btn-sm" onclick="App.navigate('shared', '${this._tripId}')">🌐 Share</button>` : ''}

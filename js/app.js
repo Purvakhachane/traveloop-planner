@@ -25,19 +25,22 @@ const App = {
   },
 
   init() {
-    // Seed demo data
-    DB.seed();
-
     // Determine initial screen
     const user = DB.getCurrentUser();
-    if (!user) {
+    const token = localStorage.getItem('tl_auth_token');
+    
+    if (token) {
+      API.setToken(token);
+    }
+
+    if (!user || !token) {
       this.navigate('auth');
     } else {
       this.navigate('dashboard');
     }
   },
 
-  navigate(screenName, param = null) {
+  async navigate(screenName, param = null) {
     const screenDef = this.screens[screenName];
     if (!screenDef) { console.error('Unknown screen:', screenName); return; }
 
@@ -76,23 +79,32 @@ const App = {
       if (navEl) navEl.classList.add('active');
     }
 
+    // Show loading state
+    container.innerHTML = `<div class="loading-screen" style="height:400px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:20px;">
+      <div class="loader"></div>
+      <div style="color:var(--text-muted); font-size:14px; animate:pulse 1.5s infinite;">Preparing your journey...</div>
+    </div>`;
+
     // Render screen with error boundary
-    let html;
     try {
-      html = screenDef.render(param);
+      const html = await screenDef.render(param);
+      container.innerHTML = html;
+      container.style.animation = 'none';
+      container.offsetHeight; // reflow
+      container.style.animation = '';
     } catch (err) {
+      if (err.message === 'UNAUTHORIZED') {
+        this.navigate('auth');
+        return;
+      }
       console.error('Screen render error [' + screenName + ']:', err);
-      html = `<div class="empty-state" style="padding:80px 20px;">
+      container.innerHTML = `<div class="empty-state" style="padding:80px 20px;">
         <div class="empty-state-icon">⚠️</div>
         <div class="empty-state-title">Oops! Something went wrong</div>
         <div class="empty-state-desc" style="color:var(--accent-coral);">${err.message}</div>
         <button class="btn btn-primary" onclick="App.navigate('dashboard')" style="margin-top:20px;">← Go to Dashboard</button>
       </div>`;
     }
-    container.innerHTML = html;
-    container.style.animation = 'none';
-    container.offsetHeight; // reflow
-    container.style.animation = '';
 
     // Run afterRender hooks
     if (screenDef.afterRender) {
@@ -115,6 +127,7 @@ const App = {
 
   logout() {
     DB.clearCurrentUser();
+    API.setToken(null);
     this.navigate('auth');
     this.toast('Logged out. Safe travels! ✈️', 'info');
   },

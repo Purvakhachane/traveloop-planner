@@ -6,9 +6,8 @@ const ItineraryBuilderScreen = {
   _tripId: null,
   _expandedStop: null,
 
-  render(tripId) {
-    const user = DB.getCurrentUser();
-    const trips = DB.getUserTrips(user.id);
+  async render(tripId) {
+    const trips = await API.getTrips();
     this._tripId = tripId || trips[0]?.id || null;
 
     if (!this._tripId) return `
@@ -19,8 +18,8 @@ const ItineraryBuilderScreen = {
         <button class="btn btn-primary" onclick="App.navigate('create-trip')" style="margin-top:16px;">Create a Trip</button>
       </div>`;
 
-    const trip = DB.getTrip(this._tripId);
-    const stops = DB.getTripStops(this._tripId);
+    const trip = await API.getTrip(this._tripId);
+    const stops = trip.stops || [];
 
     return `
     <div>
@@ -201,25 +200,40 @@ const ItineraryBuilderScreen = {
     App.closeModal();
   },
 
-  _addStop(city, startDate='', endDate='') {
-    const stop = {
-      id: DB.uuid(), tripId: this._tripId,
-      cityId: city.id, city: city.name, country: city.country, flag: city.flag,
+  async _addStop(city, startDate='', endDate='') {
+    const trip = await API.getTrip(this._tripId);
+    const stops = trip.stops || [];
+    
+    stops.push({
+      city: city.name, country: city.country, flag: city.flag,
       startDate, endDate, activities: []
-    };
-    DB.saveStop(stop);
-    App.toast(`${city.flag} ${city.name} added!`, 'success');
-    App.rerender();
+    });
+
+    try {
+      await API.saveItinerary(this._tripId, stops);
+      App.toast(`${city.flag} ${city.name} added!`, 'success');
+      App.rerender();
+    } catch (err) {
+      App.toast(err.message, 'error');
+    }
   },
 
-  deleteStop(id) {
-    DB.deleteStop(id);
-    App.toast('Stop removed', 'info');
-    App.rerender();
+  async deleteStop(id) {
+    const trip = await API.getTrip(this._tripId);
+    const stops = (trip.stops || []).filter(s => String(s.id) !== String(id));
+    
+    try {
+      await API.saveItinerary(this._tripId, stops);
+      App.toast('Stop removed', 'info');
+      App.rerender();
+    } catch (err) {
+      App.toast(err.message, 'error');
+    }
   },
 
-  openAddActivity(stopId) {
-    const stop = DB.getStops().find(s => s.id === stopId);
+  async openAddActivity(stopId) {
+    const trip = await API.getTrip(this._tripId);
+    const stop = (trip.stops || []).find(s => s.id === stopId);
     const cityActivities = ACTIVITIES_DATA.filter(a => {
       const city = CITIES_DATA.find(c => c.name === stop?.city);
       return city && a.cityId === city.id;
@@ -254,40 +268,60 @@ const ItineraryBuilderScreen = {
     `);
   },
 
-  addActivity(stopId, actId) {
+  async addActivity(stopId, actId) {
     const act = ACTIVITIES_DATA.find(a => a.id === actId);
-    const stops = DB.getStops();
-    const stop = stops.find(s => s.id === stopId);
+    const trip = await API.getTrip(this._tripId);
+    const stops = trip.stops || [];
+    const stop = stops.find(s => String(s.id) === String(stopId));
+    
     if (!stop || !act) return;
-    if (stop.activities.find(a => a.id === actId)) { App.toast('Activity already added', 'info'); return; }
-    stop.activities.push({ id: act.id, name: act.name, type: act.type, cost: act.cost, icon: act.icon, duration: act.duration });
-    DB.saveStop(stop);
-    App.closeModal();
-    App.toast(`${act.icon} ${act.name} added!`, 'success');
-    App.rerender();
+    stop.activities.push({ name: act.name, type: act.type, cost: act.cost, icon: act.icon, duration: act.duration });
+    
+    try {
+      await API.saveItinerary(this._tripId, stops);
+      App.closeModal();
+      App.toast(`${act.icon} ${act.name} added!`, 'success');
+      App.rerender();
+    } catch (err) {
+      App.toast(err.message, 'error');
+    }
   },
 
-  addCustomActivity(stopId) {
+  async addCustomActivity(stopId) {
     const name = document.getElementById('custom-act-name').value.trim();
     const cost = parseFloat(document.getElementById('custom-act-cost').value) || 0;
     if (!name) { App.toast('Enter activity name', 'error'); return; }
-    const stops = DB.getStops();
-    const stop = stops.find(s => s.id === stopId);
+    
+    const trip = await API.getTrip(this._tripId);
+    const stops = trip.stops || [];
+    const stop = stops.find(s => String(s.id) === String(stopId));
     if (!stop) return;
-    stop.activities.push({ id: DB.uuid(), name, type: 'Custom', cost, icon: '🎯', duration: '2h' });
-    DB.saveStop(stop);
-    App.closeModal();
-    App.toast(`🎯 ${name} added!`, 'success');
-    App.rerender();
+    
+    stop.activities.push({ name, type: 'Custom', cost, icon: '🎯', duration: '2h' });
+    
+    try {
+      await API.saveItinerary(this._tripId, stops);
+      App.closeModal();
+      App.toast(`🎯 ${name} added!`, 'success');
+      App.rerender();
+    } catch (err) {
+      App.toast(err.message, 'error');
+    }
   },
 
-  removeActivity(stopId, actId) {
-    const stops = DB.getStops();
-    const stop = stops.find(s => s.id === stopId);
+  async removeActivity(stopId, actId) {
+    const trip = await API.getTrip(this._tripId);
+    const stops = trip.stops || [];
+    const stop = stops.find(s => String(s.id) === String(stopId));
     if (!stop) return;
-    stop.activities = stop.activities.filter(a => a.id !== actId);
-    DB.saveStop(stop);
-    App.rerender();
+    stop.activities = (stop.activities || []).filter(a => String(a.id) !== String(actId));
+    
+    try {
+      await API.saveItinerary(this._tripId, stops);
+      App.rerender();
+    } catch (err) {
+      App.toast(err.message, 'error');
+    }
   },
 
   _fmtDate(d) {

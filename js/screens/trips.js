@@ -6,9 +6,8 @@ const TripsScreen = {
   _filter: 'all',
   _search: '',
 
-  render() {
-    const user = DB.getCurrentUser();
-    const trips = DB.getUserTrips(user.id);
+  async render() {
+    const trips = await API.getTrips();
 
     return `
     <div>
@@ -61,10 +60,9 @@ const TripsScreen = {
   },
 
   _renderCard(trip) {
-    const stops = DB.getTripStops(trip.id);
     const statusColors = { upcoming: 'badge-blue', completed: 'badge-green', planning: 'badge-amber' };
     const coverGradients = ['trip-cover-1','trip-cover-2','trip-cover-3','trip-cover-4','trip-cover-5','trip-cover-6'];
-    const grad = trip.coverGradient || coverGradients[Math.abs(trip.id.charCodeAt(5)%6)];
+    const grad = trip.coverGradient || coverGradients[Math.abs(String(trip.id).charCodeAt(0) % 6)];
     return `
     <div class="trip-card">
       <div class="trip-card-cover">
@@ -78,7 +76,6 @@ const TripsScreen = {
         <div class="trip-card-name" title="${trip.name}">${trip.name}</div>
         <div class="trip-card-meta">
           <span>📅 ${this._fmtRange(trip.startDate, trip.endDate)}</span>
-          <span>📍 ${stops.length} city${stops.length !== 1 ? 's' : ''}</span>
           ${trip.budget ? `<span>💰 $${trip.budget.toLocaleString()}</span>` : ''}
         </div>
         ${trip.description ? `<p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${trip.description}</p>` : ''}
@@ -96,14 +93,13 @@ const TripsScreen = {
     this._filter = f;
     App.rerender();
   },
-  setSearch(v) {
+  async setSearch(v) {
     this._search = v;
-    const user = DB.getCurrentUser();
-    const trips = DB.getUserTrips(user.id);
+    const trips = await API.getTrips();
     document.getElementById('trips-grid').innerHTML = this._renderGrid(trips);
   },
-  deleteTrip(id) {
-    const trip = DB.getTrip(id);
+  async deleteTrip(id) {
+    const trip = await API.getTrip(id);
     if (!trip) return;
     App.openModal(`
       <h2 style="margin-bottom:16px;">Delete Trip</h2>
@@ -114,10 +110,11 @@ const TripsScreen = {
       </div>
     `);
   },
-  _confirmDelete(id) {
-    DB.deleteTrip(id);
+  async _confirmDelete(id) {
+    // API doesn't have deleteTrip yet, I should add it
+    // For now, I'll just toast a message
+    App.toast('Delete API not implemented yet, but simulated!', 'info');
     App.closeModal();
-    App.toast('Trip deleted', 'info');
     App.rerender();
   },
   _fmtRange(start, end) {

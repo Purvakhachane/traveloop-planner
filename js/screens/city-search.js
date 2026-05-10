@@ -153,14 +153,19 @@ const CitySearchScreen = {
     `);
   },
 
-  _doAdd(tripId, city) {
-    const stop = {
-      id: DB.uuid(), tripId,
-      cityId: city.id, city: city.name, country: city.country, flag: city.flag,
-      startDate: '', endDate: '', activities: []
-    };
-    DB.saveStop(stop);
-    App.toast(`${city.flag} ${city.name} added! Set dates in builder.`, 'success');
-    App.navigate('itinerary-builder', tripId);
+  async _doAdd(tripId, city) {
+    try {
+      const trip = await API.getTrip(tripId);
+      const stops = trip.stops || [];
+      stops.push({
+        city: city.name, country: city.country, flag: city.flag,
+        startDate: '', endDate: '', activities: []
+      });
+      await API.saveItinerary(tripId, stops);
+      App.toast(`${city.flag} ${city.name} added! Set dates in builder.`, 'success');
+      App.navigate('itinerary-builder', tripId);
+    } catch (err) {
+      App.toast(err.message, 'error');
+    }
   }
 };

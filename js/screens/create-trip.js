@@ -5,9 +5,9 @@
 const CreateTripScreen = {
   _editId: null,
 
-  render(tripId) {
+  async render(tripId) {
     this._editId = tripId || null;
-    const existing = tripId ? DB.getTrip(tripId) : null;
+    const existing = tripId ? await API.getTrip(tripId) : null;
     const emojis = ['✈️','🏖️','🏔️','🌴','🏰','🗺️','🌸','🌊','🎭','🍜','🎿','🚂'];
 
     return `
@@ -160,19 +160,28 @@ const CreateTripScreen = {
     const start = document.getElementById('trip-start')?.value;
     const end = document.getElementById('trip-end')?.value;
     const desc = document.getElementById('trip-description')?.value;
-    document.getElementById('preview-name').textContent = name || 'Trip Name';
-    document.getElementById('preview-name').style.color = name ? 'var(--text-primary)' : 'var(--text-muted)';
+    
+    const previewName = document.getElementById('preview-name');
+    if (previewName) {
+      previewName.textContent = name || 'Trip Name';
+      previewName.style.color = name ? 'var(--text-primary)' : 'var(--text-muted)';
+    }
+
     if (start) {
       const s = new Date(start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const e = end ? new Date(end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-      document.getElementById('preview-dates').textContent = `📅 ${s}${e ? ' – ' + e : ''}`;
+      const previewDates = document.getElementById('preview-dates');
+      if (previewDates) previewDates.textContent = `📅 ${s}${e ? ' – ' + e : ''}`;
     }
-    if (desc) document.getElementById('preview-desc').textContent = desc.slice(0,80) + (desc.length > 80 ? '...' : '');
+    
+    if (desc) {
+      const previewDesc = document.getElementById('preview-desc');
+      if (previewDesc) previewDesc.textContent = desc.slice(0,80) + (desc.length > 80 ? '...' : '');
+    }
   },
 
-  save(e) {
+  async save(e) {
     e.preventDefault();
-    const user = DB.getCurrentUser();
     const name = document.getElementById('trip-name').value.trim();
     const startDate = document.getElementById('trip-start').value;
     const endDate = document.getElementById('trip-end').value;
@@ -184,16 +193,18 @@ const CreateTripScreen = {
 
     if (new Date(endDate) < new Date(startDate)) { App.toast('End date must be after start date', 'error'); return; }
 
-    const trip = {
-      id: this._editId || DB.uuid(),
-      userId: user.id,
+    const tripData = {
+      id: this._editId,
       name, startDate, endDate, description,
-      budget, emoji, coverGradient, isPublic,
-      status: this._editId ? (DB.getTrip(this._editId)?.status || 'planning') : 'planning',
-      createdAt: this._editId ? (DB.getTrip(this._editId)?.createdAt) : new Date().toISOString(),
+      budget, emoji, coverGradient, isPublic
     };
-    DB.saveTrip(trip);
-    App.toast(this._editId ? 'Trip updated! 🎉' : 'Trip created! 🚀 Now add some stops.', 'success');
-    App.navigate('itinerary-builder', trip.id);
+
+    try {
+      const res = await API.saveTrip(tripData);
+      App.toast(this._editId ? 'Trip updated! 🎉' : 'Trip created! 🚀 Now add some stops.', 'success');
+      App.navigate('itinerary-builder', res.id);
+    } catch (err) {
+      App.toast(err.message, 'error');
+    }
   }
 };

@@ -119,19 +119,47 @@ const ActivitySearchScreen = {
     `);
   },
 
-  _doAdd(actId, stopId) {
+  async _doAdd(actId, stopId) {
     const act = ACTIVITIES_DATA.find(a => a.id === actId);
-    const stops = DB.getStops();
-    const stop = stops.find(s => s.id === stopId);
-    if (!act || !stop) return;
-    if ((stop.activities||[]).find(a => a.id === actId)) {
-      App.toast('Already added to this stop', 'info');
+    if (!act) return;
+
+    try {
+      // Find which trip this stop belongs to
+      const trips = await API.getTrips();
+      let targetTrip = null;
+      let stopFound = null;
+
+      for (const t of trips) {
+        const fullTrip = await API.getTrip(t.id);
+        const stops = fullTrip.stops || [];
+        const stop = stops.find(s => String(s.id) === String(stopId));
+        if (stop) {
+          targetTrip = fullTrip;
+          stopFound = stop;
+          break;
+        }
+      }
+
+      if (!targetTrip || !stopFound) {
+        App.toast('Could not find stop', 'error');
+        return;
+      }
+
+      if ((stopFound.activities || []).find(a => a.name === act.name)) {
+        App.toast('Already added to this stop', 'info');
+        App.closeModal();
+        return;
+      }
+
+      stopFound.activities = [...(stopFound.activities || []), { 
+        name: act.name, type: act.type, cost: act.cost, icon: act.icon, duration: act.duration 
+      }];
+      
+      await API.saveItinerary(targetTrip.id, targetTrip.stops);
       App.closeModal();
-      return;
+      App.toast(`${act.icon} ${act.name} added to ${stopFound.city}!`, 'success');
+    } catch (err) {
+      App.toast(err.message, 'error');
     }
-    stop.activities = [...(stop.activities||[]), { id: act.id, name: act.name, type: act.type, cost: act.cost, icon: act.icon, duration: act.duration }];
-    DB.saveStop(stop);
-    App.closeModal();
-    App.toast(`${act.icon} ${act.name} added to ${stop.city}!`, 'success');
   }
 };
